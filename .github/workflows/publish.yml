@@ -10,7 +10,7 @@ on:
 
 jobs:
   publish:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     permissions:
       contents: write
     steps:
@@ -21,12 +21,18 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+
       - name: Determine version
         id: version
+        shell: pwsh
         run: |
-          VERSION="${{ inputs.version_prefix }}.${{ github.run_number }}"
-          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
-          echo "TAG=v$VERSION" >> $GITHUB_OUTPUT
+          $VERSION = "${{ inputs.version_prefix }}.${{ github.run_number }}"
+          echo "VERSION=$VERSION" >> $env:GITHUB_OUTPUT
+          echo "TAG=v$VERSION" >> $env:GITHUB_OUTPUT
           echo "Publishing version: $VERSION"
 
       - name: Add git tag
@@ -38,28 +44,29 @@ jobs:
 
       - name: Pack NuGet
         run: |
-          dotnet pack src/Moder.Update/Moder.Update.csproj \
-            -c Release \
-            -o ./nupkg \
-            /p:PackageVersion=${{ steps.version.outputs.VERSION }}
+          dotnet pack src/Moder.Update/Moder.Update.csproj -c Release -o ./nupkg /p:PackageVersion=${{ steps.version.outputs.VERSION }}
 
-      - name: Publish Updater (win-x64, FD)
+      - name: Build Updater (Rust, win-x64)
+        working-directory: src/updater
         run: |
-          dotnet publish src/Moder.Update.Updater/Moder.Update.Updater.csproj \
-            -c Release \
-            -r win-x64 \
-            --self-contained false \
-            -p:PublishSingleFile=false \
-            -o ./publish
+          cargo build --release --target x86_64-pc-windows-msvc
+
+      - name: Test Updater
+        working-directory: src/updater
+        run: |
+          cargo test --release
+
+      - name: Prepare publish artifacts
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path publish
+          Copy-Item "src/updater/target/x86_64-pc-windows-msvc/release/moder_update_updater.exe" "publish/Moder.Update.Updater.exe"
 
       - name: Push to NuGet
         env:
           NUGET_KEY: ${{ secrets.NUGET_KEY }}
         run: |
-          dotnet nuget push nupkg/*.nupkg \
-            --api-key "$NUGET_KEY" \
-            --source https://api.nuget.org/v3/index.json \
-            --skip-duplicate
+          dotnet nuget push nupkg/*.nupkg --api-key "$env:NUGET_KEY" --source https://api.nuget.org/v3/index.json --skip-duplicate
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
@@ -75,9 +82,10 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: List artifacts
+        shell: pwsh
         run: |
           echo "=== NuGet Packages ==="
-          ls -la nupkg/
+          Get-ChildItem nupkg/
           echo ""
           echo "=== GitHub Release Files ==="
-          ls -la publish/
+          Get-ChildItem publish/
