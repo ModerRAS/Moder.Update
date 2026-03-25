@@ -43,21 +43,14 @@ jobs:
             -o ./nupkg \
             /p:PackageVersion=${{ steps.version.outputs.VERSION }}
 
-      - name: Publish Updater (win-x64, self-contained)
+      - name: Publish Updater (win-x64, single file, FD)
         run: |
           dotnet publish src/Moder.Update.Updater/Moder.Update.Updater.csproj \
             -c Release \
             -r win-x64 \
-            --self-contained true \
-            -p:PublishSingleFile=false \
-            -o ./publish/Updater-win-x64
-
-      - name: Create ZIP for Updater
-        run: |
-          cd publish/Updater-win-x64
-          zip -r ../Moder.Update.Updater-win-x64.zip .
-          cd ../..
-          ls -la publish/
+            --self-contained false \
+            -p:PublishSingleFile=true \
+            -o ./publish
 
       - name: Push to NuGet
         env:
@@ -77,7 +70,7 @@ jobs:
           prerelease: false
           generate_release_notes: true
           files: |
-            publish/Moder.Update.Updater-win-x64.zip
+            publish/Moder.Update.Updater.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
