@@ -43,6 +43,7 @@ public class ProcessSpawner : IProcessSpawner
             Arguments = arguments,
             UseShellExecute = false,
             CreateNoWindow = true,
+            CreateNewProcessGroup = true,  // .NET 10: Create new process group so updater survives parent exit
         };
 
         var process = Process.Start(startInfo)
