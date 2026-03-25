@@ -43,13 +43,13 @@ jobs:
             -o ./nupkg \
             /p:PackageVersion=${{ steps.version.outputs.VERSION }}
 
-      - name: Publish Updater (win-x64, single file, FD)
+      - name: Publish Updater (win-x64, FD)
         run: |
           dotnet publish src/Moder.Update.Updater/Moder.Update.Updater.csproj \
             -c Release \
             -r win-x64 \
             --self-contained false \
-            -p:PublishSingleFile=true \
+            -p:PublishSingleFile=false \
             -o ./publish
 
       - name: Push to NuGet
@@ -70,7 +70,7 @@ jobs:
           prerelease: false
           generate_release_notes: true
           files: |
-            publish/Moder.Update.Updater.exe
+            publish/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
