@@ -19,7 +19,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Moder.Update\Moder.Update.csproj" />
-    <ProjectReference Include="..\..\src\Moder.Update.Updater\Moder.Update.Updater.csproj" />
   </ItemGroup>
 
   <ItemGroup>

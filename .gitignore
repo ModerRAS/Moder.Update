@@ -417,4 +417,8 @@ FodyWeavers.xsd
 *.msm
 *.msp
 
-.sisyphus/ 
+.sisyphus/
+
+# Rust
+target/
+Cargo.lock
