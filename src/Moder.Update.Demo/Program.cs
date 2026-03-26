@@ -55,8 +55,8 @@ public class Program
     private static async Task<int> CheckForUpdatesAsync()
     {
         var demoDir = AppContext.BaseDirectory;
-        var packagesDir = Path.GetFullPath(Path.Combine(demoDir, "../../../demo-packages"));
-        var updaterPath = Path.GetFullPath(Path.Combine(demoDir, "../../../src/Moder.Update.Updater/bin/Release/net10.0-windows/win-x64/Moder.Update.Updater.exe"));
+        var packagesDir = Path.GetFullPath(Path.Combine(demoDir, "../../../../../demo-packages"));
+        var updaterPath = Path.GetFullPath(Path.Combine(demoDir, "../../../../../src/Moder.Update.Updater/bin/Release/net10.0-windows/win-x64/Moder.Update.Updater.exe"));
 
         var versionManager = new DemoVersionManager(demoDir);
         versionManager.InitializeIfNeeded("1.0.0");
@@ -116,8 +116,8 @@ public class Program
     private static async Task<int> ApplyUpdateAsync()
     {
         var demoDir = AppContext.BaseDirectory;
-        var packagesDir = Path.GetFullPath(Path.Combine(demoDir, "../../../demo-packages"));
-        var updaterPath = Path.GetFullPath(Path.Combine(demoDir, "../../../src/Moder.Update.Updater/bin/Release/net10.0-windows/win-x64/Moder.Update.Updater.exe"));
+        var packagesDir = Path.GetFullPath(Path.Combine(demoDir, "../../../../../demo-packages"));
+        var updaterPath = Path.GetFullPath(Path.Combine(demoDir, "../../../../../src/Moder.Update.Updater/bin/Release/net10.0-windows/win-x64/Moder.Update.Updater.exe"));
 
         if (!File.Exists(updaterPath))
         {
@@ -221,7 +221,6 @@ public class Program
 
         Directory.CreateDirectory(outputDir);
 
-        var demoDir = AppContext.BaseDirectory;
         var builder = new TestPackageBuilder(new ZstdCompressor());
 
         var files = new Dictionary<string, byte[]>();
@@ -230,18 +229,6 @@ public class Program
             var relativePath = Path.GetRelativePath(sourceDir, file);
             files[relativePath] = File.ReadAllBytes(file);
         }
-
-        var demoProgramPath = Path.Combine(demoDir, "Moder.Update.Demo.dll");
-        if (File.Exists(demoProgramPath))
-            files["Moder.Update.Demo.dll"] = File.ReadAllBytes(demoProgramPath);
-
-        var demoExePath = Path.Combine(demoDir, "Moder.Update.Demo.exe");
-        if (File.Exists(demoExePath))
-            files["Moder.Update.Demo.exe"] = File.ReadAllBytes(demoExePath);
-
-        var versionTxtPath = Path.Combine(demoDir, "version.txt");
-        if (File.Exists(versionTxtPath))
-            files["version.txt"] = File.ReadAllBytes(versionTxtPath);
 
         Console.WriteLine($"Creating package from {fromVer} to {toVer} with {files.Count} files...");
 
