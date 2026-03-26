@@ -149,6 +149,61 @@ dotnet test src/Moder.Update.sln
 scripts\pack.cmd     # Windows
 ```
 
+## Demo
+
+A demo project (`Moder.Update.Demo`) is included to test the update flow end-to-end.
+
+### Prerequisites
+
+- .NET 10.0 SDK (or later)
+- Windows OS (the library uses Win32 `ReplaceFile` API)
+
+### Quick Start
+
+```bash
+# 1. Build the solution
+dotnet build src/Moder.Update.sln
+
+# 2. Create a test package (1.0.0 -> 1.1.0)
+dotnet run --project src/Moder.Update.Demo -- \
+    --create-package 1.0.0 1.1.0 ./demo-app ./demo-packages
+
+# 3. Copy demo app to a test directory
+mkdir -p ./test-app
+dotnet publish src/Moder.Update.Demo -c Release -o ./test-app
+
+# 4. Run the app with --check to see update status
+dotnet run --project ./test-app/Moder.Update.Demo.dll -- --check
+
+# 5. Run with --apply to apply the update and restart
+dotnet run --project ./test-app/Moder.Update.Demo.dll -- --apply
+```
+
+### Demo Commands
+
+| Command | Description |
+|---------|-------------|
+| `--version` | Show current version |
+| `--check` | Check for updates using local catalog |
+| `--apply` | Download and apply update package, then restart |
+| `--create-package <from> <to> <source> <output>` | Create a test update package |
+
+### Creating Update Packages
+
+```bash
+# Linux/macOS
+./scripts/create-demo-package.sh 1.0.0 1.1.0 ./my-app ./demo-packages
+
+# Windows
+scripts\create-demo-package.cmd 1.0.0 1.1.0 .\my-app .\demo-packages
+```
+
+### Demo Package Location
+
+The demo looks for update packages in `../../../demo-packages` relative to the demo binary. This directory should contain:
+- `catalog.json` - the update catalog
+- `*.zst` - the update packages
+
 ## License
 
 MIT
