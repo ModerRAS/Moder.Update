@@ -422,3 +422,7 @@ FodyWeavers.xsd
 # Rust
 target/
 Cargo.lock
+
+# NuGet and publish
+nupkg/
+publish/
