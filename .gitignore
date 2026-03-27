@@ -430,5 +430,7 @@ publish/
 # Demo
 demo-packages/
 demo-data/
+test-app/
+demo-app-source/
 Moder.Update.Demo/**/[Bb]in/
 Moder.Update.Demo/**/[Oo]bj/

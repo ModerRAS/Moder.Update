@@ -24,6 +24,7 @@ public class Program
             "--check" => await CheckForUpdatesAsync(),
             "--apply" => await ApplyUpdateAsync(),
             "--create-package" => CreatePackageAsync(rest).GetAwaiter().GetResult(),
+            "--create-version-chain" => CreateVersionChainAsync(rest).GetAwaiter().GetResult(),
             _ => ShowHelp()
         };
     }
@@ -38,6 +39,7 @@ public class Program
         Console.WriteLine("  --check                      Check for updates");
         Console.WriteLine("  --apply                      Apply update and restart");
         Console.WriteLine("  --create-package <fromVer> <toVer> <sourceDir> <outputDir>  Create a test package");
+        Console.WriteLine("  --create-version-chain <baseDir> <startVer> <count> <outputDir>  Create version chain");
         Console.WriteLine();
         return 0;
     }
@@ -55,8 +57,9 @@ public class Program
     private static async Task<int> CheckForUpdatesAsync()
     {
         var demoDir = AppContext.BaseDirectory;
-        var packagesDir = Path.GetFullPath(Path.Combine(demoDir, "../../../../../demo-packages"));
-        var updaterPath = Path.GetFullPath(Path.Combine(demoDir, "../../../../../src/Moder.Update.Updater/bin/Release/net10.0-windows/win-x64/Moder.Update.Updater.exe"));
+        var repoRoot = FindRepoRoot(demoDir);
+        var packagesDir = Path.Combine(repoRoot, "demo-packages");
+        var updaterPath = Path.Combine(repoRoot, "src/Moder.Update.Updater/bin/Release/net10.0-windows/win-x64/Moder.Update.Updater.exe");
 
         var versionManager = new DemoVersionManager(demoDir);
         versionManager.InitializeIfNeeded("1.0.0");
@@ -116,8 +119,9 @@ public class Program
     private static async Task<int> ApplyUpdateAsync()
     {
         var demoDir = AppContext.BaseDirectory;
-        var packagesDir = Path.GetFullPath(Path.Combine(demoDir, "../../../../../demo-packages"));
-        var updaterPath = Path.GetFullPath(Path.Combine(demoDir, "../../../../../src/Moder.Update.Updater/bin/Release/net10.0-windows/win-x64/Moder.Update.Updater.exe"));
+        var repoRoot = FindRepoRoot(demoDir);
+        var packagesDir = Path.Combine(repoRoot, "demo-packages");
+        var updaterPath = Path.Combine(repoRoot, "src/Moder.Update.Updater/bin/Release/net10.0-windows/win-x64/Moder.Update.Updater.exe");
 
         if (!File.Exists(updaterPath))
         {
@@ -238,9 +242,142 @@ public class Program
         return 0;
     }
 
+    private static async Task<int> CreateVersionChainAsync(string[] args)
+    {
+        if (args.Length < 4)
+        {
+            Console.WriteLine("Error: --create-version-chain requires <baseDir> <startVer> <count> <outputDir>");
+            Console.WriteLine("Usage: --create-version-chain <baseDir> <startVer> <count> <outputDir>");
+            Console.WriteLine("Example: --create-version-chain ./test-app 1.0.0 10 ./demo-packages");
+            return 1;
+        }
+
+        var baseDir = Path.GetFullPath(args[0]);
+        var startVer = args[1];
+        var count = int.Parse(args[2]);
+        var outputDir = Path.GetFullPath(args[3]);
+
+        if (!Directory.Exists(baseDir))
+        {
+            Console.WriteLine($"Error: Base directory not found: {baseDir}");
+            return 1;
+        }
+
+        Directory.CreateDirectory(outputDir);
+
+        var builder = new TestPackageBuilder(new ZstdCompressor());
+        var versions = new List<string>();
+        var catalogEntries = new List<UpdateCatalogEntry>();
+
+        Console.WriteLine($"Creating {count} versions starting from {startVer}...");
+
+        var current = ParseVersion(startVer);
+        for (int i = 0; i < count; i++)
+        {
+            versions.Add(FormatVersion(current));
+            current = IncrementVersion(current);
+        }
+
+        Console.WriteLine($"Versions: {string.Join(" -> ", versions)}");
+
+        for (int i = 0; i < versions.Count - 1; i++)
+        {
+            var fromVer = versions[i];
+            var toVer = versions[i + 1];
+
+            Console.WriteLine($"Creating package {fromVer} -> {toVer}...");
+
+            var files = new Dictionary<string, byte[]>();
+            foreach (var file in Directory.GetFiles(baseDir, "*", SearchOption.AllDirectories))
+            {
+                var relativePath = Path.GetRelativePath(baseDir, file);
+                var content = File.ReadAllBytes(file);
+
+                if (relativePath == "version.txt")
+                    content = Encoding.UTF8.GetBytes(toVer);
+
+                files[relativePath] = content;
+            }
+
+            var packagePath = await builder.CreatePackageAsync(toVer, fromVer, null, files, outputDir);
+            Console.WriteLine($"  Created: {packagePath}");
+
+            var fi = new FileInfo(packagePath);
+            catalogEntries.Add(new UpdateCatalogEntry
+            {
+                PackagePath = Path.GetFileName(packagePath),
+                TargetVersion = toVer,
+                MinSourceVersion = fromVer,
+                MaxSourceVersion = null,
+                IsCumulative = false,
+                PackageChecksum = ComputeSha512String(File.ReadAllBytes(packagePath)),
+                FileCount = files.Count,
+                CompressedSize = (int)fi.Length,
+                UncompressedSize = files.Sum(f => f.Value.Length)
+            });
+        }
+
+        var latestVer = versions[^1];
+        var catalog = new UpdateCatalog
+        {
+            LatestVersion = latestVer,
+            MinRequiredVersion = versions[0],
+            LastUpdated = DateTime.UtcNow,
+            Entries = catalogEntries
+        };
+
+        var catalogPath = Path.Combine(outputDir, "catalog.json");
+        var catalogJson = JsonSerializer.Serialize(catalog, new JsonSerializerOptions { WriteIndented = true });
+        await File.WriteAllTextAsync(catalogPath, catalogJson);
+
+        Console.WriteLine();
+        Console.WriteLine($"Version chain created successfully!");
+        Console.WriteLine($"Latest version: {latestVer}");
+        Console.WriteLine($"Catalog: {catalogPath}");
+        Console.WriteLine();
+        Console.WriteLine("To test:");
+        Console.WriteLine($"  1. Publish this version: dotnet publish src/Moder.Update.Demo -c Release -o ./test-app");
+        Console.WriteLine($"  2. Copy {latestVer} version files to ./test-app");
+        Console.WriteLine($"  3. Set version.txt to {versions[0]}");
+        Console.WriteLine($"  4. Run: dotnet ./test-app/Moder.Update.Demo.dll --check");
+        return 0;
+    }
+
+    private static int[] ParseVersion(string ver)
+    {
+        var parts = ver.Split('.');
+        return parts.Select(int.Parse).ToArray();
+    }
+
+    private static string FormatVersion(int[] ver)
+    {
+        return string.Join(".", ver);
+    }
+
+    private static int[] IncrementVersion(int[] ver)
+    {
+        ver[^1]++;
+        return ver;
+    }
+
     private static string ComputeSha512String(byte[] data)
     {
         var hash = SHA512.HashData(data);
         return Convert.ToHexString(hash).ToLowerInvariant();
+    }
+
+    private static string FindRepoRoot(string startDir)
+    {
+        var dir = startDir;
+        while (dir != null)
+        {
+            if (Directory.Exists(Path.Combine(dir, ".git")) ||
+                File.Exists(Path.Combine(dir, "README.md")))
+            {
+                return dir;
+            }
+            dir = Directory.GetParent(dir)?.FullName;
+        }
+        return startDir;
     }
 }
