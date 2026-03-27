@@ -40,16 +40,21 @@ public static class VersionRange
 
         while (current < to)
         {
-            var cumulative = manifests
-                .Where(m => m.IsCumulative
-                    && Version.TryParse(m.TargetVersion, out var tv)
-                    && tv <= to
-                    && Version.TryParse(m.MinSourceVersion, out var minV)
-                    && Contains(current, minV,
-                        m.MaxSourceVersion is not null && Version.TryParse(m.MaxSourceVersion, out var maxV)
-                            ? maxV : null))
-                .OrderByDescending(m => Version.Parse(m.TargetVersion))
-                .FirstOrDefault();
+            UpdateManifest? cumulative = null;
+            foreach (var m in manifests.Where(m => m.IsCumulative))
+            {
+                if (!Version.TryParse(m.TargetVersion, out var tv) || tv > to)
+                    continue;
+                if (!Version.TryParse(m.MinSourceVersion, out var minV))
+                    continue;
+                Version? maxV = null;
+                if (m.MaxSourceVersion is not null && Version.TryParse(m.MaxSourceVersion, out var mv))
+                    maxV = mv;
+                if (!Contains(current, minV, maxV))
+                    continue;
+                if (cumulative is null || Version.Parse(m.TargetVersion) > Version.Parse(cumulative.TargetVersion))
+                    cumulative = m;
+            }
 
             if (cumulative is not null)
             {
@@ -58,16 +63,21 @@ public static class VersionRange
                 continue;
             }
 
-            var next = manifests
-                .Where(m =>
-                    Version.TryParse(m.TargetVersion, out var tv)
-                    && tv <= to
-                    && Version.TryParse(m.MinSourceVersion, out var minV)
-                    && Contains(current, minV,
-                        m.MaxSourceVersion is not null && Version.TryParse(m.MaxSourceVersion, out var maxV)
-                            ? maxV : null))
-                .OrderBy(m => Version.Parse(m.TargetVersion))
-                .FirstOrDefault();
+            UpdateManifest? next = null;
+            foreach (var m in manifests)
+            {
+                if (!Version.TryParse(m.TargetVersion, out var tv) || tv > to || tv <= current)
+                    continue;
+                if (!Version.TryParse(m.MinSourceVersion, out var minV))
+                    continue;
+                Version? maxV = null;
+                if (m.MaxSourceVersion is not null && Version.TryParse(m.MaxSourceVersion, out var mv))
+                    maxV = mv;
+                if (!Contains(current, minV, maxV))
+                    continue;
+                if (next is null || tv < Version.Parse(next.TargetVersion))
+                    next = m;
+            }
 
             if (next is null)
                 break;
@@ -94,16 +104,21 @@ public static class VersionRange
 
         while (current < to)
         {
-            var cumulative = entryList
-                .Where(e => e.IsCumulative
-                    && Version.TryParse(e.TargetVersion, out var tv)
-                    && tv <= to
-                    && Version.TryParse(e.MinSourceVersion, out var minV)
-                    && Contains(current, minV,
-                        e.MaxSourceVersion is not null && Version.TryParse(e.MaxSourceVersion, out var maxV)
-                            ? maxV : null))
-                .OrderByDescending(e => Version.Parse(e.TargetVersion))
-                .FirstOrDefault();
+            UpdateCatalogEntry? cumulative = null;
+            foreach (var e in entryList.Where(e => e.IsCumulative))
+            {
+                if (!Version.TryParse(e.TargetVersion, out var tv) || tv > to)
+                    continue;
+                if (!Version.TryParse(e.MinSourceVersion, out var minV))
+                    continue;
+                Version? maxV = null;
+                if (e.MaxSourceVersion is not null && Version.TryParse(e.MaxSourceVersion, out var mv))
+                    maxV = mv;
+                if (!Contains(current, minV, maxV))
+                    continue;
+                if (cumulative is null || Version.Parse(e.TargetVersion) > Version.Parse(cumulative.TargetVersion))
+                    cumulative = e;
+            }
 
             if (cumulative is not null)
             {
@@ -112,16 +127,21 @@ public static class VersionRange
                 continue;
             }
 
-            var next = entryList
-                .Where(e =>
-                    Version.TryParse(e.TargetVersion, out var tv)
-                    && tv <= to
-                    && Version.TryParse(e.MinSourceVersion, out var minV)
-                    && Contains(current, minV,
-                        e.MaxSourceVersion is not null && Version.TryParse(e.MaxSourceVersion, out var maxV)
-                            ? maxV : null))
-                .OrderBy(e => Version.Parse(e.TargetVersion))
-                .FirstOrDefault();
+            UpdateCatalogEntry? next = null;
+            foreach (var e in entryList)
+            {
+                if (!Version.TryParse(e.TargetVersion, out var tv) || tv > to || tv <= current)
+                    continue;
+                if (!Version.TryParse(e.MinSourceVersion, out var minV))
+                    continue;
+                Version? maxV = null;
+                if (e.MaxSourceVersion is not null && Version.TryParse(e.MaxSourceVersion, out var mv))
+                    maxV = mv;
+                if (!Contains(current, minV, maxV))
+                    continue;
+                if (next is null || tv < Version.Parse(next.TargetVersion))
+                    next = e;
+            }
 
             if (next is null)
                 break;
