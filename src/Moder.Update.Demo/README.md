@@ -1,48 +1,48 @@
 # Moder.Update.Demo
 
-A demo console application for testing the Moder.Update dual-process update flow.
+用于测试 Moder.Update 双进程更新流程的示例控制台应用程序。
 
-## Prerequisites
+## 前置要求
 
-- .NET 10.0 SDK (or later)
-- Windows OS (the library uses Win32 `ReplaceFile` API)
+- .NET 10.0 SDK 或更高版本
+- Windows 操作系统（该库使用 Win32 `ReplaceFile` API）
 
-## Quick Start
+## 快速开始
 
-### Step 1: Build the solution
+### 步骤 1：构建解决方案
 
 ```bash
 dotnet build src/Moder.Update.sln
 ```
 
-### Step 2: Create a test update package
+### 步骤 2：创建测试更新包
 
-Create a package that updates FROM version 1.0.0 TO version 1.1.0:
+创建从 1.0.0 版本更新到 1.1.0 版本的包：
 
 ```bash
 dotnet run --project src/Moder.Update.Demo -- \
     --create-package 1.0.0 1.1.0 ./demo-app ./demo-packages
 ```
 
-This creates:
-- `demo-packages/catalog.json` - the update catalog
-- `demo-packages/update-1.0.0-to-1.1.0.zst` - the update package
+这会创建：
+- `demo-packages/catalog.json` — 更新目录
+- `demo-packages/update-1.0.0-to-1.1.0.zst` — 更新包
 
-### Step 3: Publish the demo app
+### 步骤 3：发布示例程序
 
 ```bash
 mkdir -p ./test-app
 dotnet publish src/Moder.Update.Demo -c Release -o ./test-app
 ```
 
-### Step 4: Verify update detection works
+### 步骤 4：验证更新检测是否正常工作
 
 ```bash
 dotnet ./test-app/Moder.Update.Demo.dll --version
-# Output: Current version: 1.0.0
+# 输出: Current version: 1.0.0
 
 dotnet ./test-app/Moder.Update.Demo.dll --check
-# Output:
+# 输出:
 # Checking for updates from version 1.0.0...
 # Packages directory: /path/to/demo-packages
 # Update available! Latest version: 1.1.0
@@ -50,47 +50,47 @@ dotnet ./test-app/Moder.Update.Demo.dll --check
 #   1.0.0 -> 1.1.0 (update-1.0.0-to-1.1.0.zst)
 ```
 
-### Step 5: Apply the update
+### 步骤 5：应用更新
 
 ```bash
 dotnet ./test-app/Moder.Update.Demo.dll --apply
 ```
 
-This will:
-1. Download the update package
-2. Apply it to the application directory
-3. Spawn the updater process and restart the app
+这将：
+1. 下载更新包
+2. 将其应用到应用程序目录
+3. 启动更新进程并重启应用
 
-After restart, run `--version` to confirm the update was applied.
+重启后，运行 `--version` 确认更新已应用。
 
-## Commands
+## 命令
 
-| Command | Description |
-|---------|-------------|
-| `--version` | Show current version |
-| `--check` | Check for updates using local catalog |
-| `--apply` | Apply update package and restart |
-| `--create-package <from> <to> <source> <output>` | Create a test update package |
+| 命令 | 描述 |
+|------|------|
+| `--version` | 显示当前版本 |
+| `--check` | 使用本地目录检查更新 |
+| `--apply` | 应用更新包并重启 |
+| `--create-package <from> <to> <source> <output>` | 创建测试更新包 |
 
-## How It Works
+## 工作原理
 
-1. `--check` uses `UpdateChecker` to fetch `catalog.json` from the local `demo-packages/` directory
-2. `--apply` downloads the `.zst` package and calls `UpdateManager.ApplyUpdateAsync()`
-3. After applying, `PrepareRestart()` spawns `Moder.Update.Updater.exe` and the app exits
-4. The updater waits for the app to exit, replaces files, verifies checksums, and restarts
+1. `--check` 使用 `UpdateChecker` 从本地 `demo-packages/` 目录获取 `catalog.json`
+2. `--apply` 下载 `.zst` 包并调用 `UpdateManager.ApplyUpdateAsync()`
+3. 应用后，`PrepareRestart()` 启动 `Moder.Update.Updater.exe` 并退出应用
+4. 更新进程等待应用退出，替换文件，验证校验和，然后重启
 
-## Package Format
+## 包格式
 
-Update packages use Moder.Update's binary format:
-- 4 bytes magic: `MUP\0`
-- Zstd-compressed tar archive containing:
-  - `manifest.json` - version info, file list, checksums
-  - Application files to replace
+更新包使用 Moder.Update 的二进制格式：
+- 4 字节魔术头：`MUP\0`
+- Zstd 压缩的 tar 归档，包含：
+  - `manifest.json` — 版本信息、文件列表、校验和
+  - 要替换的应用程序文件
 
-## Troubleshooting
+## 故障排除
 
-**"Updater not found" warning**: The updater binary should be at `src/Moder.Update.Updater/bin/Release/net10.0-windows/win-x64/Moder.Update.Updater.exe`. Rebuild the updater if missing.
+**"Updater not found" 警告**：更新进程二进制文件应在 `src/Moder.Update.Updater/bin/Release/net10.0-windows/win-x64/Moder.Update.Updater.exe`。如果缺失，请重新构建。
 
-**"No update available"**: Make sure `demo-packages/catalog.json` exists and has entries with matching `minSourceVersion`.
+**"No update available"**：确保 `demo-packages/catalog.json` 存在，且包含匹配 `minSourceVersion` 的条目。
 
-**Package creation fails**: Ensure the source directory contains the files you want to package.
+**包创建失败**：确保源目录包含你要打包的文件。

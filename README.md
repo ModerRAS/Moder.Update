@@ -1,27 +1,27 @@
 # Moder.Update
 
-A .NET dual-process self-update library. Applications can download updates, spawn a detached updater process, exit, have the updater replace files atomically, and restart.
+一个 .NET 双进程自更新库。应用程序可以下载更新、启动独立的更新进程、退出，让更新进程原子性地替换文件并重启。
 
-## Features
+## 功能特性
 
-- **Dual-process update pattern** — main app downloads update, spawns updater, exits; updater replaces files and restarts main app
-- **Zstd compression** — update packages use Zstd (via ZstdSharp) for efficient compression
-- **Atomic file replacement** — uses `ReplaceFile` Win32 API on Windows for reliable file replacement
-- **Rollback support** — automatic backup and rollback on failure
-- **Chain update path** — supports version chains with anchor and cumulative packages
-- **SHA512 verification** — file-level integrity checking
-- **No built-in HTTP** — consumers provide their own HTTP implementation via `IUpdateCatalogFetcher`
-- **Headless** — pure library with event-based progress reporting, no UI
+- **双进程更新模式** — 主程序下载更新、启动更新进程、退出；更新进程替换文件并重启主程序
+- **Zstd 压缩** — 更新包使用 Zstd（通过 ZstdSharp）进行高效压缩
+- **原子性文件替换** — 在 Windows 上使用 `ReplaceFile` Win32 API 进行可靠的文件替换
+- **回滚支持** — 失败时自动备份和回滚
+- **链式更新路径** — 支持锚点包和累积包的版本链
+- **SHA512 校验** — 文件级完整性检查
+- **无内置 HTTP** — 消费者通过 `IUpdateCatalogFetcher` 提供自己的 HTTP 实现
+- **无界面** — 纯库，通过事件报告进度，无 UI
 
-## Getting Started
+## 入门指南
 
-### Install
+### 安装
 
 ```bash
 dotnet add package Moder.Update
 ```
 
-### Basic Usage
+### 基本用法
 
 ```csharp
 using Moder.Update;
@@ -30,14 +30,14 @@ using Moder.Update.FileOperations;
 using Moder.Update.Models;
 using Moder.Update.Package;
 
-// Set up components
+// 设置组件
 var compressor = new ZstdCompressor();
 var packageReader = new ZstdPackageReader(compressor);
 var fileService = new FileReplacementService();
 var processSpawner = new ProcessSpawner();
 var updateManager = new UpdateManager(packageReader, fileService, processSpawner);
 
-// Check for updates (implement IUpdateCatalogFetcher with your HTTP client)
+// 检查更新（使用你的 HTTP 客户端实现 IUpdateCatalogFetcher）
 var checker = new UpdateChecker(myFetcher, updateManager);
 var result = await checker.CheckForUpdatesAsync("1.0.0");
 
@@ -45,7 +45,7 @@ if (result.Status == UpdateCheckStatus.UpdateAvailable)
 {
     foreach (var entry in result.UpdatePath!)
     {
-        // Download and apply each package
+        // 下载并应用每个更新包
         using var packageStream = await myFetcher.DownloadPackageAsync(entry.PackagePath);
         var updateResult = await updateManager.ApplyUpdateAsync(packageStream, new UpdateOptions
         {
@@ -55,13 +55,13 @@ if (result.Status == UpdateCheckStatus.UpdateAvailable)
         });
     }
 
-    // Spawn updater and exit
+    // 启动更新进程并退出
     updateManager.PrepareRestart("Moder.Update.Updater.exe", options);
     Environment.Exit(0);
 }
 ```
 
-### Implementing IUpdateCatalogFetcher
+### 实现 IUpdateCatalogFetcher
 
 ```csharp
 public class MyHttpFetcher : IUpdateCatalogFetcher
@@ -87,21 +87,21 @@ public class MyHttpFetcher : IUpdateCatalogFetcher
 }
 ```
 
-## Package Format
+## 包格式
 
-Update packages use the following binary format:
+更新包使用以下二进制格式：
 
 ```
-[4 bytes: "MUP\0" magic] + [Zstd-compressed tar archive]
+[4 字节: "MUP\0" 魔术头] + [Zstd 压缩的 tar 归档]
 ```
 
-The tar archive contains:
-- `manifest.json` — update manifest with version info, file list, and checksums
-- Application files — full replacement files (not diffs)
+tar 归档包含：
+- `manifest.json` — 更新清单，包含版本信息、文件列表和校验和
+- 应用程序文件 — 完整替换文件（非差分）
 
-## Update Catalog
+## 更新目录
 
-The update catalog is a JSON file served at a fixed URL:
+更新目录是一个 JSON 文件，服务于固定 URL：
 
 ```json
 {
@@ -123,72 +123,72 @@ The update catalog is a JSON file served at a fixed URL:
 }
 ```
 
-## Updater Process
+## 更新进程
 
-The `Moder.Update.Updater` is a standalone console application that:
+`Moder.Update.Updater` 是一个独立的控制台应用程序：
 
-1. Waits for the main application process to exit
-2. Replaces application files using atomic operations
-3. Restarts the main application
+1. 等待主应用程序进程退出
+2. 使用原子操作替换应用程序文件
+3. 重启主应用程序
 
 ```bash
 Moder.Update.Updater --target-pid 1234 --target-path /path/to/app --staging-dir /path/to/staging
 ```
 
-## Building
+## 构建
 
 ```bash
 dotnet build src/Moder.Update.sln
 dotnet test src/Moder.Update.sln
 ```
 
-## Packing
+## 打包
 
 ```bash
 ./scripts/pack.sh   # Linux/macOS
 scripts\pack.cmd     # Windows
 ```
 
-## Demo
+## 示例程序
 
-A demo project (`Moder.Update.Demo`) is included to test the update flow end-to-end.
+提供了一个示例项目（`Moder.Update.Demo`）用于端到端测试更新流程。
 
-### Prerequisites
+### 前置要求
 
-- .NET 10.0 SDK (or later)
-- Windows OS (the library uses Win32 `ReplaceFile` API)
+- .NET 10.0 SDK 或更高版本
+- Windows 操作系统（该库使用 Win32 `ReplaceFile` API）
 
-### Quick Start
+### 快速开始
 
 ```bash
-# 1. Build the solution
+# 1. 构建解决方案
 dotnet build src/Moder.Update.sln
 
-# 2. Create a test package (1.0.0 -> 1.1.0)
+# 2. 创建测试包 (1.0.0 -> 1.1.0)
 dotnet run --project src/Moder.Update.Demo -- \
     --create-package 1.0.0 1.1.0 ./demo-app ./demo-packages
 
-# 3. Copy demo app to a test directory
+# 3. 将示例程序复制到测试目录
 mkdir -p ./test-app
 dotnet publish src/Moder.Update.Demo -c Release -o ./test-app
 
-# 4. Run the app with --check to see update status
+# 4. 运行 --check 查看更新状态
 dotnet run --project ./test-app/Moder.Update.Demo.dll -- --check
 
-# 5. Run with --apply to apply the update and restart
+# 5. 运行 --apply 应用更新并重启
 dotnet run --project ./test-app/Moder.Update.Demo.dll -- --apply
 ```
 
-### Demo Commands
+### 示例程序命令
 
-| Command | Description |
-|---------|-------------|
-| `--version` | Show current version |
-| `--check` | Check for updates using local catalog |
-| `--apply` | Download and apply update package, then restart |
-| `--create-package <from> <to> <source> <output>` | Create a test update package |
+| 命令 | 描述 |
+|------|------|
+| `--version` | 显示当前版本 |
+| `--check` | 使用本地目录检查更新 |
+| `--apply` | 下载并应用更新包，然后重启 |
+| `--create-package <from> <to> <source> <output>` | 创建测试更新包 |
 
-### Creating Update Packages
+### 创建更新包
 
 ```bash
 # Linux/macOS
@@ -198,12 +198,12 @@ dotnet run --project ./test-app/Moder.Update.Demo.dll -- --apply
 scripts\create-demo-package.cmd 1.0.0 1.1.0 .\my-app .\demo-packages
 ```
 
-### Demo Package Location
+### 示例程序包位置
 
-The demo looks for update packages in `../../../demo-packages` relative to the demo binary. This directory should contain:
-- `catalog.json` - the update catalog
-- `*.zst` - the update packages
+示例程序从相对于二进制文件的 `../../../demo-packages` 目录查找更新包。该目录应包含：
+- `catalog.json` — 更新目录
+- `*.zst` — 更新包
 
-## License
+## 许可协议
 
 MIT
