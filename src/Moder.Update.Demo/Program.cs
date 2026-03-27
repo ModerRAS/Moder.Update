@@ -59,7 +59,7 @@ public class Program
         var demoDir = AppContext.BaseDirectory;
         var repoRoot = FindRepoRoot(demoDir);
         var packagesDir = Path.Combine(repoRoot, "demo-packages");
-        var updaterPath = Path.Combine(repoRoot, "src/Moder.Update.Updater/bin/Release/net10.0-windows/win-x64/Moder.Update.Updater.exe");
+        var updaterPath = Path.Combine(repoRoot, "src/updater/target/release/moder_update_updater");
 
         var versionManager = new DemoVersionManager(demoDir);
         versionManager.InitializeIfNeeded("1.0.0");
@@ -121,7 +121,7 @@ public class Program
         var demoDir = AppContext.BaseDirectory;
         var repoRoot = FindRepoRoot(demoDir);
         var packagesDir = Path.Combine(repoRoot, "demo-packages");
-        var updaterPath = Path.Combine(repoRoot, "src/Moder.Update.Updater/bin/Release/net10.0-windows/win-x64/Moder.Update.Updater.exe");
+        var updaterPath = Path.Combine(repoRoot, "src/updater/target/release/moder_update_updater");
 
         if (!File.Exists(updaterPath))
         {

@@ -107,7 +107,7 @@ dotnet .\test-app\Moder.Update.Demo.dll --apply
 
 ## 故障排除
 
-**"Updater not found" 警告**：更新进程二进制文件应在 `src/Moder.Update.Updater/bin/Release/net10.0-windows/win-x64/Moder.Update.Updater.exe`。如果缺失，请重新构建。
+**"Updater not found" 警告**：更新进程二进制文件应在 `src/updater/target/release/moder_update_updater`。如果缺失，请运行 `cargo build --release` 构建。
 
 **"No update available"**：确保 `demo-packages/catalog.json` 存在，且包含匹配 `minSourceVersion` 的条目。
 
