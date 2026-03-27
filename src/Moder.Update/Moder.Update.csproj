@@ -6,7 +6,7 @@
     <Nullable>enable</Nullable>
     <RootNamespace>Moder.Update</RootNamespace>
     <PackageId>Moder.Update</PackageId>
-    <Version>0.1.0</Version>
+    <Version>0.3.6</Version>
     <Authors>ModerRAS</Authors>
     <Description>Dual-process self-update library for .NET applications</Description>
     <PackageTags>update;self-update;dual-process</PackageTags>
